@@ -1,8 +1,7 @@
 package com.mercdev.assigment2;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.FileInputStream;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
@@ -14,9 +13,11 @@ import android.app.Activity;
 import android.app.LoaderManager;
 import android.app.LoaderManager.LoaderCallbacks;
 import android.content.AsyncTaskLoader;
+import android.content.Intent;
 import android.content.Loader;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -35,7 +36,7 @@ public class MainActivity extends Activity implements LoaderCallbacks<Void> {
 	private static Bitmap bitmap = null;
 	private static BufferedOutputStream fileOutpStream;
 	private Button button;
-	private static final String FILE_NAME = "image.jpg";
+	private static final String FILE_NAME = "downloadedImage.png";
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -48,14 +49,15 @@ public class MainActivity extends Activity implements LoaderCallbacks<Void> {
 			public void onClick(View v) {
 				LoaderManager lm = getLoaderManager();
 				lm.initLoader(LOADER_ID, null, MainActivity.this);
-				ImageDownloader.mActivity = new WeakReference<MainActivity>(MainActivity.this);
+				ImageDownloader.mActivity = new WeakReference<MainActivity>(
+						MainActivity.this);
 			}
 		};
 		button.setOnClickListener(onClickButton);
 
 		try {
-			fileOutpStream = new BufferedOutputStream(openFileOutput(
-					FILE_NAME, MODE_WORLD_WRITEABLE));
+			fileOutpStream = new BufferedOutputStream(openFileOutput(FILE_NAME,
+					MODE_WORLD_READABLE));
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		}
@@ -66,18 +68,21 @@ public class MainActivity extends Activity implements LoaderCallbacks<Void> {
 	}
 
 	/**
-	 * Class extending Loader. This class will download picture and check for progress in background
-	 *
+	 * Class extending Loader. This class will download picture and check for
+	 * progress in background
+	 * 
 	 */
 	static class ImageDownloader extends AsyncTaskLoader<Void> {
 		/**
 		 * Needs for updating progressBar
 		 */
 		static WeakReference<MainActivity> mActivity;
+
 		ImageDownloader(MainActivity activity) {
 			super(activity);
 			mActivity = new WeakReference<MainActivity>(activity);
 		}
+
 		@Override
 		public Void loadInBackground() {
 			try {
@@ -101,14 +106,16 @@ public class MainActivity extends Activity implements LoaderCallbacks<Void> {
 					if (bufferLength > 0) {
 						// Save data to file
 						fileOutpStream.write(buffer, 0, bufferLength);
+						fileOutpStream.flush();
 						downloadedSize += bufferLength;
 						int progress = (int) Math
 								.floor((downloadedSize / size) * 100);
 						mActivity.get().progressBar.setProgress(progress);
-					}else{
+					} else {
 						connectionClosed = true;
 					}
 				}
+				
 				fileOutpStream.close();
 				conn.disconnect();
 				fileOutpStream = null;
@@ -134,7 +141,7 @@ public class MainActivity extends Activity implements LoaderCallbacks<Void> {
 		}
 	}
 
-	/* 
+	/*
 	 * Creates Loader class (ImageLoader)
 	 */
 	@Override
@@ -144,23 +151,20 @@ public class MainActivity extends Activity implements LoaderCallbacks<Void> {
 		return asyncTaskLoader;
 	}
 
-	
-	/* 
+	/*
 	 * Caused when Loader was finished its work
 	 */
 	@Override
 	public void onLoadFinished(Loader<Void> loader, Void arg2) {
 		switch (loader.getId()) {
 		case LOADER_ID:
-			try {
-				bitmap = BitmapFactory.decodeStream(openFileInput(FILE_NAME));
-			} catch (FileNotFoundException e) {
-				e.printStackTrace();
-			}
-			ImageView imgView = (ImageView) findViewById(R.id.image);
-			imgView.setImageBitmap(bitmap);
-			Log.v(TAG, "Download finished");
-			break;
+			File imageFile = new File (getFilesDir() + "/" + FILE_NAME);
+			Intent i2 = new Intent();
+			i2.setAction(android.content.Intent.ACTION_VIEW);
+			Uri uri = Uri.fromFile(imageFile);
+			i2.setDataAndType(uri, "image/*");
+			startActivity(i2);
+            break;
 		}
 	}
 
