@@ -16,12 +16,10 @@ import android.content.AsyncTaskLoader;
 import android.content.Context;
 import android.content.Intent;
 import android.content.Loader;
-import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Looper;
+import android.os.Handler;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
@@ -31,27 +29,36 @@ import android.widget.Toast;
 
 public class MainActivity extends Activity implements LoaderCallbacks<Void> {
 
+	// Needs just for test Toasts. Causes error
 	private static final String BAD_IMAGE_URL = "dsfgbk";
-
+	// use this URL for downloading
 	private static final String IMAGE_URL = "http://upload.wikimedia.org/wikipedia/commons/0/06/%D0%A0%D0%B0%D1%81%D1%88%D0%B8%D1%80%D0%B5%D0%BD%D0%B8%D0%B5-%D0%92%D1%81%D0%B5%D0%BB%D0%B5%D0%BD%D0%BD%D0%BE%D0%B9.png";
 	private final static String TAG = "ImageManager";
-	private ProgressBar progressBar;
-	private final int LOADER_ID = 1;
-	private static HttpURLConnection conn;
-	private static Bitmap bitmap;
-	private static BufferedOutputStream fileOutpStream;
+	
 	private Button button;
-	private static final String FILE_NAME = "downloadedImage.png";
-	private final String BUTTON_TEXT_DOWNLOAD = "Download";
-	private final String BUTTON_TEXT_OPEN = "Open";
+	private TextView status;
+	private ProgressBar progressBar;
+	
+	private static HttpURLConnection conn;
+	private static BufferedOutputStream fileOutpStream;
+	// Necessary for Toast showing
+	private static Context context;
+	// Flag of successful downloading
+	private static boolean downloadedSuccesful = false;
+	// Needs for Toast showing
+	private static Handler handler;
+
+	private final int LOADER_ID = 1;
+	
+	
+	// String constants for interface
+	private final static String FILE_NAME = "downloadedImage.png";
+	private final static String BUTTON_TEXT_DOWNLOAD = "Download";
+	private final static String BUTTON_TEXT_OPEN = "Open";
 	private final static String STATUS_IDLE = "Status : Idle";
 	private final static String STATUS_DOWNLOADING = "Status : Downloading";
 	private final static String STATUS_DOWNLOADED = "Status : Downloaded";
-	private TextView status;
-	private static Toast toast;
-	private static Context context;
-	private static boolean downloadedSuccesful = false;
-
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -85,6 +92,7 @@ public class MainActivity extends Activity implements LoaderCallbacks<Void> {
 		progressBar.setVisibility(progressBar.INVISIBLE);
 
 		context = getApplicationContext();
+		handler = new Handler();
 	}
 
 	/**
@@ -94,7 +102,7 @@ public class MainActivity extends Activity implements LoaderCallbacks<Void> {
 	 */
 	static class ImageDownloader extends AsyncTaskLoader<Void> {
 		/**
-		 * Needs for updating progressBar
+		 * Necessary for updating progressBar
 		 */
 		static WeakReference<MainActivity> mActivity;
 
@@ -143,14 +151,11 @@ public class MainActivity extends Activity implements LoaderCallbacks<Void> {
 				conn = null;
 				downloadedSuccesful = true;
 			} catch (MalformedURLException ex) {
-				//ShowToast("Wrong URL!");
-				Log.e(TAG, "Url parsing was failed: " + IMAGE_URL);
+				ShowToast("Wrong URL!");
 			} catch (IOException ex) {
-				//ShowToast("Unable to download image from URL");
-				Log.d(TAG, IMAGE_URL + " does not exists" + ex.getMessage());
+				ShowToast("Unable to download image from URL");
 			} catch (OutOfMemoryError e) {
-				//ShowToast("Out of memory!");
-				Log.w(TAG, "Out of memory!!!");
+				ShowToast("Out of memory!");
 				return null;
 			} finally {
 				if (fileOutpStream != null)
@@ -163,12 +168,6 @@ public class MainActivity extends Activity implements LoaderCallbacks<Void> {
 					conn.disconnect();
 			}
 			return null;
-		}
-
-		public void ShowToast(String message) {
-			int duration = Toast.LENGTH_SHORT;
-			Toast.makeText(context, message, duration).show();
-			Log.d(TAG, "Toast  " + message);
 		}
 
 	}
@@ -193,19 +192,25 @@ public class MainActivity extends Activity implements LoaderCallbacks<Void> {
 		switch (loader.getId()) {
 		case LOADER_ID:
 			if (!downloadedSuccesful) {
-				return;
+				button.setText(BUTTON_TEXT_DOWNLOAD);
+				status.setText(STATUS_IDLE);
+				progressBar.setVisibility(progressBar.INVISIBLE);
+				button.setEnabled(true);
+				getLoaderManager().destroyLoader(LOADER_ID);
+				Log.v(TAG, "restart download page");
+			} else {
+				// If downloading process was successful
+				button.setText(BUTTON_TEXT_OPEN);
+				button.setEnabled(true);
+				status.setText(STATUS_DOWNLOADED);
+				progressBar.setVisibility(progressBar.INVISIBLE);
+				File imageFile = new File(getFilesDir() + "/" + FILE_NAME);
+				Intent i2 = new Intent();
+				i2.setAction(android.content.Intent.ACTION_VIEW);
+				Uri uri = Uri.fromFile(imageFile);
+				i2.setDataAndType(uri, "image/*");
+				startActivity(i2);
 			}
-			button.setText(BUTTON_TEXT_OPEN);
-			button.setEnabled(true);
-			status.setText(STATUS_DOWNLOADED);
-			progressBar.setVisibility(progressBar.INVISIBLE);
-			File imageFile = new File(getFilesDir() + "/" + FILE_NAME);
-			Intent i2 = new Intent();
-			i2.setAction(android.content.Intent.ACTION_VIEW);
-			Uri uri = Uri.fromFile(imageFile);
-			i2.setDataAndType(uri, "image/*");
-			startActivity(i2);
-
 			break;
 		}
 	}
@@ -214,4 +219,19 @@ public class MainActivity extends Activity implements LoaderCallbacks<Void> {
 	public void onLoaderReset(Loader<Void> loader) {
 		Log.v(TAG, "Loader reset");
 	}
+
+	
+	/**
+	 * Shows toast with message
+	 */
+	public static void ShowToast(final String message) {
+		handler.post(new Runnable() {
+			public void run() {
+				int duration = Toast.LENGTH_SHORT;
+				Toast.makeText(context, message, duration).show();
+			}
+		});
+
+	}
+
 }
