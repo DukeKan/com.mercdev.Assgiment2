@@ -15,14 +15,17 @@ public final class R {
         public static final int ic_launcher=0x7f020001;
     }
     public static final class id {
-        public static final int button=0x7f060002;
-        public static final int image=0x7f060001;
-        public static final int progress_bar=0x7f060000;
+        public static final int button=0x7f060000;
+        public static final int header=0x7f060001;
+        public static final int progress_bar=0x7f060003;
+        public static final int status=0x7f060002;
     }
     public static final class layout {
         public static final int a_main_activity=0x7f030000;
     }
     public static final class string {
+        public static final int Download=0x7f040002;
+        public static final int Header=0x7f040003;
         public static final int app_name=0x7f040000;
         public static final int hello_world=0x7f040001;
     }

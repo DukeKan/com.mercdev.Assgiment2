@@ -3,5 +3,7 @@
 
     <string name="app_name">Assigment2</string>
     <string name="hello_world">Hello world!</string>
+    <string name="Download">Download</string>
+    <string name="Header">Picture downloader</string>
 
 </resources>
